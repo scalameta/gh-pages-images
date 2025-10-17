@@ -94,7 +94,7 @@ def main(path: String): Unit = {
         stats = stats.copy(imagesFound = stats.imagesFound + 1)
 
         // Return mapping from URL to relative path
-        url -> s"https://github.com/scalameta/gh-pages-images/blob/master/$baseImageDir/$filename"
+        url -> s"https://github.com/scalameta/gh-pages-images/blob/master/$baseImageDir/$localPath?raw=true"
       }.toMap
 
       // Replace imgur URLs with local paths
