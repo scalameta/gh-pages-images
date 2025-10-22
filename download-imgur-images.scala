@@ -7,7 +7,7 @@ import java.nio.file.{Files, Paths, StandardCopyOption}
 import scala.io.Source
 
 val imgurPattern: Regex =
-  """(https?://i\.imgur\.com/[a-zA-Z0-9]+\.(?:png|jpg|jpeg|gif))""".r
+  """(https:\/\/imgur\.com\/[a-zA-Z0-9]+\.(?:png|jpg|jpeg|gif))""".r
 
 case class Stats(
     filesProcessed: Int = 0,
@@ -26,14 +26,15 @@ def main(path: String): Unit = {
   // Find all markdown files (excluding node_modules, .metals, and target directories)
   println("Searching for markdown files...")
   val markdownFiles = os
-    .walk(pathToSearch)
-    .filter(file => file.ext == "md" || file.ext == "js")
-    .filter(p =>
-      !p.segments.contains("node_modules") &&
-        !p.segments.contains(".metals") &&
-        !p.segments.contains("target")
+    .walk(
+      pathToSearch,
+      skip = { path =>
+        path.baseName == "node_modules" || path.baseName == ".metals" || path.baseName == "target" || path.baseName == "build" || path.baseName == ".git"
+      }
     )
-
+    .filter { p =>
+      os.isFile(p) && (p.ext == "md" || p.ext == "js" || p.ext == "scala")
+    }
   println(s"Found ${markdownFiles.length} markdown files\n")
 
   var stats = Stats()
@@ -65,7 +66,6 @@ def main(path: String): Unit = {
       val urlMapping = imgurUrls.map { url =>
         val filename = url.split("/").last
         val localPath = imageSubdir / filename
-
         // Download image if it doesn't exist
         if (!os.exists(localPath)) {
           println(s"  Downloading: $url")
@@ -90,12 +90,15 @@ def main(path: String): Unit = {
         } else {
           println(s"  ✓ Already exists: ${localPath.relativeTo(os.pwd)}")
         }
-
+        println(os.exists(localPath))
         stats = stats.copy(imagesFound = stats.imagesFound + 1)
 
+        val relativePath = localPath.relativeTo(os.pwd)
+
         // Return mapping from URL to relative path
-        url -> s"https://github.com/scalameta/gh-pages-images/blob/master/$baseImageDir/$localPath?raw=true"
+        url -> s"https://github.com/scalameta/gh-pages-images/blob/master/$relativePath?raw=true"
       }.toMap
+
 
       // Replace imgur URLs with local paths
       var updatedContent = content
